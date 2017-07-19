@@ -9,6 +9,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include "dwall.h"
+
 std::vector<std::string> parseargs( const int nargs, const char** argv ) {
   std::vector<std::string> filelist;
   
@@ -62,6 +64,8 @@ std::vector<std::string> parseargs( const int nargs, const char** argv ) {
   
   return filelist;
 }
+
+
 
 int main( const int nargs, const char** argv ) {
   
@@ -149,15 +153,19 @@ int main( const int nargs, const char** argv ) {
   int mcshwr_pdg[1000];
   int mcshwr_TrackId[1000];
   int mcshwr_Process[1000];
-  int mcshwr_startX[1000];
-  int mcshwr_startY[1000];
-  int mcshwr_startZ[1000];  
-  int mcshwr_endX[1000];
-  int mcshwr_endY[1000];
-  int mcshwr_endZ[1000];
+  float mcshwr_startX[1000];
+  float mcshwr_startY[1000];
+  float mcshwr_startZ[1000];  
+  float mcshwr_endX[1000];
+  float mcshwr_endY[1000];
+  float mcshwr_endZ[1000];
   int mcshwr_Ancestorpdg[1000];
   int mcshwr_AncestorTrkId[1000];
   int mcshwr_AncestorProcess[1000];
+  int mcshwr_isEngDeposited[1000];
+  float mcshwr_CombEngX[1000];
+  float mcshwr_CombEngY[1000];
+  float mcshwr_CombEngZ[1000];  
   tree->SetBranchAddress("no_mcshowers", &no_mcshowers);
   tree->SetBranchAddress("mcshwr_pdg", mcshwr_pdg);
   tree->SetBranchAddress("mcshwr_TrackId", mcshwr_TrackId);
@@ -170,7 +178,11 @@ int main( const int nargs, const char** argv ) {
   tree->SetBranchAddress("mcshwr_endZ", mcshwr_endZ);
   tree->SetBranchAddress("mcshwr_Ancestorpdg", mcshwr_Ancestorpdg);
   tree->SetBranchAddress("mcshwr_AncesotorTrkId", mcshwr_AncestorTrkId);
-  tree->SetBranchAddress("mcshwr_Process", mcshwr_Process);  
+  tree->SetBranchAddress("mcshwr_Process", mcshwr_Process);
+  tree->SetBranchAddress("mcshwr_isEngDeposited", mcshwr_isEngDeposited);
+  tree->SetBranchAddress("mcshwr_CombEngX", mcshwr_CombEngX );
+  tree->SetBranchAddress("mcshwr_CombEngY", mcshwr_CombEngY );
+  tree->SetBranchAddress("mcshwr_CombEngZ", mcshwr_CombEngZ );  
   
   double pot;
   pottree->SetBranchAddress("pot",&pot);
@@ -193,7 +205,11 @@ int main( const int nargs, const char** argv ) {
   int nprotons60mev;
   int nshowers;
   int npi0;
+  int nchargedpi;  
   float closestshowerdist;
+  float closestpi0showerdist;
+  int nobspi0gamma;
+  int nobsgamma;  
   float lepdwall;
   scraped->Branch("enugev",&enugev,"enugev/F"); // enu_truth
   scraped->Branch("mode",&mode,"mode/I");       // mode_truth
@@ -211,7 +227,11 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" );
   scraped->Branch("nshowers", &nshowers, "nshowers/I" );
   scraped->Branch("npi0", &npi0, "npi0/I" );
-  scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );
+  scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" );  
+  scraped->Branch("closestpi0showerdist", &closestpi0showerdist, "closestpi0showerdist/F" );
+  scraped->Branch("nobspi0gamma", &nobspi0gamma, "nobspi0gamma/I" );
+  scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
+  scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );  
   scraped->Branch("lepdwall", &lepdwall, "lepdwall/F" );
   
 
@@ -224,9 +244,10 @@ int main( const int nargs, const char** argv ) {
 
     if ( ientry%100==0 )
       std::cout << "Anatree entry " << ientry << std::endl;
-    
-    for (int inu=0; inu<mcevts_truth; inu++) {
 
+
+    bool haslepton = false;
+    for (int inu=0; inu<1; inu++) {
       enugev = enu_truth[inu];
       mode   = mode_truth[inu];
       ccnc   = ccnc_truth[inu];
@@ -239,43 +260,118 @@ int main( const int nargs, const char** argv ) {
       fluxweight = 1.0;
       q2truth = Q2_truth;
       wtruth  = W_truth;
-      lmom = lep_mom_truth;
+      if ( ccnc==0 )
+	lmom = lep_mom_truth;
+      else
+	lmom = 0;
       for ( auto& evtwgt_types : (*pevtwgt_weight) ) {
 	for ( auto& evtwgt : evtwgt_types ) {
 	  if ( !std::isnan(evtwgt) && !std::isinf(evtwgt) )
 	    fluxweight *= evtwgt;
 	}
       }
+    }
 
-      // final state information
-      // get lepton end point
-      // get proton ke and count
-      protonmaxke = 0;
-      nprotons60mev = 0;
-      for (int itrk=0; itrk<no_mctracks; itrk++) {
-	float dist=0;
-	dist += (nuvtx[0]-mctrk_startX[itrk])*(nuvtx[0]-mctrk_startX[itrk]);
-	dist += (nuvtx[1]-mctrk_startY[itrk])*(nuvtx[1]-mctrk_startY[itrk]);
-	dist += (nuvtx[2]-mctrk_startZ[itrk])*(nuvtx[2]-mctrk_startZ[itrk]);
-	dist = sqrt(dist);
-
-	if ( dist<0.1 )
+    // final state information
+    // get lepton end point
+    // get proton ke and count
+    protonmaxke = 0;
+    nprotons60mev = 0;
+    npi0 = 0;
+    nchargedpi = 0;
+    closestshowerdist = -1.0;
+    closestpi0showerdist = -1.0;    
+    lepdwall = -1;
+    for (int itrk=0; itrk<no_mctracks; itrk++) {
+      float dist=0;
+      dist += (nuvtx[0]-mctrk_startX[itrk])*(nuvtx[0]-mctrk_startX[itrk]);
+      dist += (nuvtx[1]-mctrk_startY[itrk])*(nuvtx[1]-mctrk_startY[itrk]);
+      dist += (nuvtx[2]-mctrk_startZ[itrk])*(nuvtx[2]-mctrk_startZ[itrk]);
+      dist = sqrt(dist);
+      
+      if ( dist>1.0e-3 )
+	continue;
 	
-	if ( mctrk_pdg[itrk]==2212 ) {
-	  
-	  float ke = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 938*938 )-938 );
-	  std::cout << " primary proton: ke=" << ke << " process=" << mctrk_Process[itrk] << " ancestor=" << mctrk_Ancestorpdg[itrk] << std::endl;
-	  if ( ke>60 )
-	    nprotons60mev++;
-	  if ( ke>protonmaxke ) {
-	    protonmaxke = ke;
-	  }
+      if ( mctrk_pdg[itrk]==2212 ) {
+	
+	float ke = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 938*938 )-938 );
+	std::cout << " primary proton: ke=" << ke << " process=" << mctrk_Process[itrk] << " ancestor=" << mctrk_Ancestorpdg[itrk] << " dist2vtx=" << dist << std::endl;
+	if ( ke>60 )
+	  nprotons60mev++;
+	if ( ke>protonmaxke ) {
+	  protonmaxke = ke;
 	}
       }
-      std::cout << "number of >60 mev protons: " << nprotons60mev << ", maxke=" << protonmaxke << std::endl;
-      
-      scraped->Fill();
+      else if ( mctrk_pdg[itrk]==13 || mctrk_pdg[itrk]==-13 ) {
+	std::vector<float> endpos(3);
+	endpos[0] = mctrk_endX[itrk];
+	endpos[1] = mctrk_endY[itrk];
+	endpos[2] = mctrk_endZ[itrk];
+	int boundary_type = 0;
+	lepdwall = anascraper::dwall( endpos, boundary_type );
+      }
+      else if ( mctrk_pdg[itrk]==111 ) {
+	npi0++;
+
+	// shower info
+	std::cout << "Chase down pi0 gammas: pi0 id=" << mctrk_TrackId[itrk] << std::endl;
+	for ( int ishw=0; ishw<no_mcshowers; ishw++) {
+	  if ( mcshwr_AncestorTrkId[ishw]==mctrk_TrackId[itrk] ) {
+
+	    float shwdist = -1;
+	    if ( mcshwr_isEngDeposited[ishw]>0 ) {
+	      nobspi0gamma++;
+
+	      float shwdir[3];
+	      shwdir[0] = mcshwr_CombEngX[ishw]-nuvtx[0];
+	      shwdir[1] = mcshwr_CombEngY[ishw]-nuvtx[1];
+	      shwdir[2] = mcshwr_CombEngZ[ishw]-nuvtx[2];
+	      shwdist = sqrt( shwdir[0]*shwdir[0] + shwdir[1]*shwdir[1] + shwdir[2]*shwdir[2] );
+	      if ( (closestpi0showerdist<0 || shwdist<closestpi0showerdist) ) {
+		closestpi0showerdist = shwdist;
+	      }
+	    }
+	    
+	    std::cout << "  mcshower: " << mcshwr_TrackId[ishw]
+		      << " pdg=" << mcshwr_pdg[ishw]
+		      << " ancestor=" << mcshwr_AncestorTrkId[ishw]
+		      << " shwdist=" << shwdist
+		      << " is_edep=" << mcshwr_isEngDeposited[ishw]
+		      << " start=(" << mcshwr_startX[ishw] << "," << mcshwr_startY[ishw] << "," << mcshwr_startZ[ishw] << ")"
+		      << " eng=(" << mcshwr_CombEngX[ishw] << "," << mcshwr_CombEngY[ishw] << "," << mcshwr_CombEngZ[ishw] << ")"
+		      << std::endl;
+	  }//end of if gamma from pi0
+	}
+      }
+      else if ( mctrk_pdg[itrk]==211 || mctrk_pdg[itrk]==-211 ) {
+	nchargedpi++;
+      }
+      else {
+	std::cout << "other pdg: " << mctrk_pdg[itrk] << std::endl;
+      }
+    }//end of mc track
+    std::cout << "number of >60 mev protons: " << nprotons60mev << ", maxke=" << protonmaxke << std::endl;
+
+    
+    // shower info
+    for ( int ishw=0; ishw<no_mcshowers; ishw++) {
+      float shwdist = -1;
+      if ( mcshwr_isEngDeposited[ishw]>0 ) {
+	nobsgamma++;
+
+	float shwdir[3];
+	shwdir[0] = mcshwr_CombEngX[ishw]-nuvtx[0];
+	shwdir[1] = mcshwr_CombEngY[ishw]-nuvtx[1];
+	shwdir[2] = mcshwr_CombEngZ[ishw]-nuvtx[2];
+	shwdist = sqrt( shwdir[0]*shwdir[0] + shwdir[1]*shwdir[1] + shwdir[2]*shwdir[2] );
+	if ( (closestshowerdist<0 || shwdist<closestshowerdist) ) {
+	  closestpi0showerdist = shwdist;
+	}
+      }
     }
+    
+      
+    scraped->Fill();
 
     ientry++;
     bytes = tree->GetEntry(ientry);
