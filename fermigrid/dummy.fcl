@@ -1,0 +1,45 @@
+#include "services_microboone.fcl"
+#include "singles_microboone.fcl"
+
+process_name: SuperaDummy
+
+services:
+{
+  FileCatalogMetadata:     @local::art_file_catalog_mc
+  @table::microboone_simulation_services
+}
+
+source:
+{
+  module_type: EmptyEvent
+  timestampPlugin: { plugin_type: "GeneratedEventTimestamp" }
+  maxEvents:   1          # Number of events to create
+  firstRun:    1           # Run number to use for this file
+  firstEvent:  1           # number of first event in the file
+}
+
+physics:
+{
+
+ producers:
+ {
+  generator: @local::microboone_singlep
+ }
+
+ analyzers:
+ {
+ }
+
+ stream1:  []
+
+ trigger_paths: []
+
+ end_paths:     []  
+}
+
+services.ChannelStatusService.ChannelStatusProvider.UseDB: false
+
+outputs:
+{
+}
+
