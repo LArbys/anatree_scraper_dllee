@@ -211,6 +211,7 @@ int main( const int nargs, const char** argv ) {
   int nobspi0gamma;
   int nobsgamma;  
   float lepdwall;
+  float vtxdwall;
   scraped->Branch("enugev",&enugev,"enugev/F"); // enu_truth
   scraped->Branch("mode",&mode,"mode/I");       // mode_truth
   scraped->Branch("ccnc",&ccnc,"ccnc/I");       // ccnc_truth
@@ -233,6 +234,8 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
   scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );  
   scraped->Branch("lepdwall", &lepdwall, "lepdwall/F" );
+  scraped->Branch("vtxdwall", &vtxdwall, "vtxdwall/F" );
+
   
 
   TTree* scrapedpot = new TTree("pot", "Scraped POT");
@@ -270,6 +273,11 @@ int main( const int nargs, const char** argv ) {
 	    fluxweight *= evtwgt;
 	}
       }
+      int boundary_type = 0;
+      std::vector<float> nuvtx_v(3,0);
+      for (int i=0; i<3; i++)
+	nuvtx_v[i] = nuvtx[i];
+      vtxdwall = anascraper::dwall( nuvtx_v, boundary_type );
     }
 
     // final state information
@@ -278,10 +286,14 @@ int main( const int nargs, const char** argv ) {
     protonmaxke = 0;
     nprotons60mev = 0;
     npi0 = 0;
+    nshowers = 0;
     nchargedpi = 0;
     closestshowerdist = -1.0;
     closestpi0showerdist = -1.0;    
-    lepdwall = -1;
+    nobspi0gamma = 0;
+    nobsgamma = 0;
+    lepdwall = 1000;
+    vtxdwall = 1000;
     for (int itrk=0; itrk<no_mctracks; itrk++) {
       float dist=0;
       dist += (nuvtx[0]-mctrk_startX[itrk])*(nuvtx[0]-mctrk_startX[itrk]);
