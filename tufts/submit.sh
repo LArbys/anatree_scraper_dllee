@@ -3,7 +3,7 @@
 #SBATCH --job-name=anatree
 #SBATCH --output=log_anatree.log
 #SBATCH --ntasks=50
-#SBATCH --time=20:00
+#SBATCH --time=30:00
 #SBATCH --mem-per-cpu=4000
 
 

@@ -102,6 +102,7 @@ int main( const int nargs, const char** argv ) {
   float Q2_truth;
   float W_truth;
   float lep_mom_truth;
+  float lepke;
   std::vector< std::vector<double> >* pevtwgt_weight = NULL;
   tree->SetBranchAddress("mcevts_truth", &mcevts_truth);
   tree->SetBranchAddress("enu_truth", enu_truth);
@@ -206,6 +207,7 @@ int main( const int nargs, const char** argv ) {
   int nshowers;
   int npi0;
   int nchargedpi;  
+  int nchargedpi35mev;  
   float closestshowerdist;
   float closestpi0showerdist;
   int nobspi0gamma;
@@ -224,11 +226,13 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("q2truth", &q2truth, "q2truth/F");  // Q2_truth
   scraped->Branch("wtruth", &wtruth, "wtruth/F");     // W_truth
   scraped->Branch("lmom", &lmom, "lmom/F" );          // lep_mom_truth
+  scraped->Branch("lepke", &lepke, "lepke/F");
   scraped->Branch("protonmaxke", &protonmaxke, "protonmaxke/F" ); // derived from mctrk
   scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" );
   scraped->Branch("nshowers", &nshowers, "nshowers/I" );
   scraped->Branch("npi0", &npi0, "npi0/I" );
   scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" );  
+  scraped->Branch("nchargedpi35mev", &nchargedpi35mev, "nchargedpi35mev/I" );  
   scraped->Branch("closestpi0showerdist", &closestpi0showerdist, "closestpi0showerdist/F" );
   scraped->Branch("nobspi0gamma", &nobspi0gamma, "nobspi0gamma/I" );
   scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
@@ -264,9 +268,16 @@ int main( const int nargs, const char** argv ) {
       q2truth = Q2_truth;
       wtruth  = W_truth;
       if ( ccnc==0 )
-	lmom = lep_mom_truth;
+	lmom = lep_mom_truth*1000.0;
       else
 	lmom = 0;
+
+      if ( abs(nufluxpdg)==12 )
+	lepke = sqrt(lmom*lmom + 0.911*0.911)-0.911;
+      else if ( abs(nufluxpdg)==14 ) {
+	lepke = sqrt(lmom*lmom + 105.0*105.0)-105.0;
+      }
+
       for ( auto& evtwgt_types : (*pevtwgt_weight) ) {
 	for ( auto& evtwgt : evtwgt_types ) {
 	  if ( !std::isnan(evtwgt) && !std::isinf(evtwgt) )
@@ -288,12 +299,12 @@ int main( const int nargs, const char** argv ) {
     npi0 = 0;
     nshowers = 0;
     nchargedpi = 0;
+    nchargedpi35mev = 0;
     closestshowerdist = -1.0;
     closestpi0showerdist = -1.0;    
     nobspi0gamma = 0;
     nobsgamma = 0;
     lepdwall = 1000;
-    vtxdwall = 1000;
     for (int itrk=0; itrk<no_mctracks; itrk++) {
       float dist=0;
       dist += (nuvtx[0]-mctrk_startX[itrk])*(nuvtx[0]-mctrk_startX[itrk]);
@@ -357,6 +368,9 @@ int main( const int nargs, const char** argv ) {
       }
       else if ( mctrk_pdg[itrk]==211 || mctrk_pdg[itrk]==-211 ) {
 	nchargedpi++;
+	float ke_pi = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 139.5*139.5 )-139.5 );
+	if ( ke_pi>35.0 )
+	  nchargedpi35mev++;
       }
       else {
 	std::cout << "other pdg: " << mctrk_pdg[itrk] << std::endl;
