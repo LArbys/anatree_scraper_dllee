@@ -211,7 +211,9 @@ int main( const int nargs, const char** argv ) {
   float closestshowerdist;
   float closestpi0showerdist;
   int nobspi0gamma;
-  int nobsgamma;  
+  int nmissedpi0gamma;  
+  int nobsgamma;
+  int nobsgamma2pix;
   float lepdwall;
   float vtxdwall;
   scraped->Branch("enugev",&enugev,"enugev/F"); // enu_truth
@@ -228,14 +230,16 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("lmom", &lmom, "lmom/F" );          // lep_mom_truth
   scraped->Branch("lepke", &lepke, "lepke/F");
   scraped->Branch("protonmaxke", &protonmaxke, "protonmaxke/F" ); // derived from mctrk
-  scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" );
-  scraped->Branch("nshowers", &nshowers, "nshowers/I" );
-  scraped->Branch("npi0", &npi0, "npi0/I" );
-  scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" );  
+  scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" ); // derived from mctrk
+  scraped->Branch("nshowers", &nshowers, "nshowers/I" ); // derived from mcshower
+  scraped->Branch("npi0", &npi0, "npi0/I" ); // from mctrk (should be shower?)
+  scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" ); // from mctrk
   scraped->Branch("nchargedpi35mev", &nchargedpi35mev, "nchargedpi35mev/I" );  
   scraped->Branch("closestpi0showerdist", &closestpi0showerdist, "closestpi0showerdist/F" );
   scraped->Branch("nobspi0gamma", &nobspi0gamma, "nobspi0gamma/I" );
+  scraped->Branch("nmissedpi0gamma", &nmissedpi0gamma, "nmissedpi0gamma/I" );  
   scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
+  scraped->Branch("nobsgamma2pix", &nobsgamma2pix, "nobsgamma2pix/I" );
   scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );  
   scraped->Branch("lepdwall", &lepdwall, "lepdwall/F" );
   scraped->Branch("vtxdwall", &vtxdwall, "vtxdwall/F" );
@@ -254,6 +258,7 @@ int main( const int nargs, const char** argv ) {
 
 
     bool haslepton = false;
+    int primleptonid = -1;
     for (int inu=0; inu<1; inu++) {
       enugev = enu_truth[inu];
       mode   = mode_truth[inu];
@@ -303,7 +308,9 @@ int main( const int nargs, const char** argv ) {
     closestshowerdist = -1.0;
     closestpi0showerdist = -1.0;    
     nobspi0gamma = 0;
-    nobsgamma = 0;
+    nmissedpi0gamma = 0;
+    nobsgamma = 0;        
+    nobsgamma2pix = 0;
     lepdwall = 1000;
     for (int itrk=0; itrk<no_mctracks; itrk++) {
       float dist=0;
@@ -326,6 +333,7 @@ int main( const int nargs, const char** argv ) {
 	}
       }
       else if ( mctrk_pdg[itrk]==13 || mctrk_pdg[itrk]==-13 ) {
+	// primary muon
 	std::vector<float> endpos(3);
 	endpos[0] = mctrk_endX[itrk];
 	endpos[1] = mctrk_endY[itrk];
@@ -353,7 +361,7 @@ int main( const int nargs, const char** argv ) {
 	      if ( (closestpi0showerdist<0 || shwdist<closestpi0showerdist) ) {
 		closestpi0showerdist = shwdist;
 	      }
-	    }
+	    }// if energy deposited
 	    
 	    std::cout << "  mcshower: " << mcshwr_TrackId[ishw]
 		      << " pdg=" << mcshwr_pdg[ishw]
@@ -363,10 +371,15 @@ int main( const int nargs, const char** argv ) {
 		      << " start=(" << mcshwr_startX[ishw] << "," << mcshwr_startY[ishw] << "," << mcshwr_startZ[ishw] << ")"
 		      << " eng=(" << mcshwr_CombEngX[ishw] << "," << mcshwr_CombEngY[ishw] << "," << mcshwr_CombEngZ[ishw] << ")"
 		      << std::endl;
+	    if ( shwdist<0 )
+	      nmissedpi0gamma++;
 	  }//end of if gamma from pi0
-	}
+	}//end of shwr loop
+	//if ( nobspi0gamma>0 )
+	//	  std::cin.get();
       }
       else if ( mctrk_pdg[itrk]==211 || mctrk_pdg[itrk]==-211 ) {
+	// charged pions
 	nchargedpi++;
 	float ke_pi = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 139.5*139.5 )-139.5 );
 	if ( ke_pi>35.0 )
@@ -393,6 +406,9 @@ int main( const int nargs, const char** argv ) {
 	if ( (closestshowerdist<0 || shwdist<closestshowerdist) ) {
 	  closestpi0showerdist = shwdist;
 	}
+
+	if ( shwdist<0.6 )
+	  nobsgamma2pix++;
       }
     }
     
