@@ -204,6 +204,8 @@ int main( const int nargs, const char** argv ) {
   float lmom;
   float protonmaxke;
   int nprotons60mev;
+  int nmuon;
+  int nelectron;
   int nshowers;
   int npi0;
   int nchargedpi;  
@@ -233,6 +235,8 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" ); // derived from mctrk
   scraped->Branch("nshowers", &nshowers, "nshowers/I" ); // derived from mcshower
   scraped->Branch("npi0", &npi0, "npi0/I" ); // from mctrk (should be shower?)
+  scraped->Branch("nmuon", &nmuon, "nmuon/I" ); // from mctrk (should be shower?)
+  scraped->Branch("nelectron", &nelectron, "nelectron/I" ); // from mctrk (should be shower?)
   scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" ); // from mctrk
   scraped->Branch("nchargedpi35mev", &nchargedpi35mev, "nchargedpi35mev/I" );  
   scraped->Branch("closestpi0showerdist", &closestpi0showerdist, "closestpi0showerdist/F" );
@@ -259,6 +263,8 @@ int main( const int nargs, const char** argv ) {
 
     bool haslepton = false;
     int primleptonid = -1;
+    nmuon = 0;
+    nelectron = 0;
     for (int inu=0; inu<1; inu++) {
       enugev = enu_truth[inu];
       mode   = mode_truth[inu];
@@ -272,15 +278,21 @@ int main( const int nargs, const char** argv ) {
       fluxweight = 1.0;
       q2truth = Q2_truth;
       wtruth  = W_truth;
+      lepke = -1.0;
       if ( ccnc==0 )
 	lmom = lep_mom_truth*1000.0;
       else
 	lmom = 0;
 
-      if ( abs(nufluxpdg)==12 )
+      if ( abs(nufluxpdg)==12 ) { 
 	lepke = sqrt(lmom*lmom + 0.911*0.911)-0.911;
+	if ( ccnc==0 )
+	  nelectron++;
+      }
       else if ( abs(nufluxpdg)==14 ) {
 	lepke = sqrt(lmom*lmom + 105.0*105.0)-105.0;
+	if ( ccnc==0 )
+	  nmuon++;
       }
 
       for ( auto& evtwgt_types : (*pevtwgt_weight) ) {

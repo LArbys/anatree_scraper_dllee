@@ -6,7 +6,32 @@ import os,sys
 # there a total of 20567 files, which amounts to a total of 123 GB of data
 # scraped output files are in the 100 of kB, making the shrinking of this information worth it
 
-ANATREE_SOURCEDIR="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data/mcc8.1/bnbnu_only_anatree/anatree"
+# SPECIFY FOLDER WHERE INPUT DATA LIVES
+# ------------------------------------------------------------------------
+TUFTS="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data"
+MCCAFFREY="/mnt/sdb/larbys/data"
+#MCCAFFREY="/home/taritree/larbys/data2"
+DATAFOLDER="__unset__"
+try:
+    LOCAL_MACHINE=os.popen("uname -n").readlines()[0].strip()
+    if LOCAL_MACHINE not in ["mccaffrey","login001"]:
+        raise RuntimeError("unrecognized machine")
+
+    if LOCAL_MACHINE=="mccaffrey":
+        DATAFOLDER=MCCAFFREY
+    elif LOCAL_MACHINE=="login001":
+        DATAFOLDER=TUFTS
+        
+except:
+    print "Could not get machine name"
+    LOCAL_MACHINE=os.popen("uname -n").readlines()
+    print LOCAL_MACHINE
+    sys.exit(-1)
+
+if DATAFOLDER=="__unset__":
+    raise RuntimeError("Didnt set DATAFOLDER properly.")
+
+ANATREE_SOURCEDIR=DATAFOLDER+"/comparison_samples/1e1p/anatree_links"
 
 anafiles = os.listdir( ANATREE_SOURCEDIR )
 analist = []
