@@ -1,3 +1,4 @@
 *~
 *.o
 scrape_anatree
+tufts/slurm_*
