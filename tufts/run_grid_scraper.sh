@@ -37,7 +37,8 @@ outfilename=`printf anatree_scraped_%03d.root ${JOBID}`
 mv output_scrapedtree.root ${outfilename}
 cp ${outfilename} ${outputdir}/${outfilename}
 
-
+cd ../
+rm -r ${jobdir}
 
 
 

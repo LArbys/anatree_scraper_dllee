@@ -10,11 +10,11 @@
 LARBYSDIR=/cluster/kappa/90-days-archive/wongjiradlab
 
 CONTAINER=/cluster/kappa/90-days-archive/wongjiradlab/larbys/images/dllee_unified/singularity-dllee-unified-071017.img
-WORKDIR=${LARBYSDIR}/grid_jobs/anatree_scraper_dllee/tufts
+WORKDIR=${LARBYSDIR}/twongj01/anatree_scraper_dllee/tufts
 INPUTLISTDIR=${WORKDIR}/inputlist
 JOBLIST=${WORKDIR}/jobidlist.txt
-BINARY=${LARBYSDIR}/grid_jobs/anatree_scraper_dllee/scrape_anatree
-OUTPUTDIR=${LARBYSDIR}/larbys/data/mcc8.1/bnbnu_only_anatree/scraped
+BINARY=${LARBYSDIR}/twongj01/anatree_scraper_dllee/scrape_anatree
+OUTPUTDIR=${WORKDIR}/output/
 
 mkdir -p ${OUTPUTDIR}
 module load singularity

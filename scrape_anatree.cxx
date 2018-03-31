@@ -152,6 +152,7 @@ int main( const int nargs, const char** argv ) {
   // MC SHOWER
   int no_mcshowers;
   int mcshwr_pdg[1000];
+  int mcshwr_origin[1000];
   int mcshwr_TrackId[1000];
   int mcshwr_Process[1000];
   float mcshwr_startX[1000];
@@ -169,6 +170,7 @@ int main( const int nargs, const char** argv ) {
   float mcshwr_CombEngZ[1000];  
   tree->SetBranchAddress("no_mcshowers", &no_mcshowers);
   tree->SetBranchAddress("mcshwr_pdg", mcshwr_pdg);
+  tree->SetBranchAddress("mcshwr_origin", mcshwr_origin);
   tree->SetBranchAddress("mcshwr_TrackId", mcshwr_TrackId);
   tree->SetBranchAddress("mcshwr_Process", mcshwr_Process);
   tree->SetBranchAddress("mcshwr_startX", mcshwr_startX);  
@@ -209,10 +211,12 @@ int main( const int nargs, const char** argv ) {
   int nchargedpi;  
   int nchargedpi35mev;  
   float closestshowerdist;
+  float closestelectrondist;
   float closestpi0showerdist;
   int nobspi0gamma;
   int nmissedpi0gamma;  
   int nobsgamma;
+  int nobselectron;
   int nobsgamma2pix;
   float lepdwall;
   float vtxdwall;
@@ -239,8 +243,10 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("nobspi0gamma", &nobspi0gamma, "nobspi0gamma/I" );
   scraped->Branch("nmissedpi0gamma", &nmissedpi0gamma, "nmissedpi0gamma/I" );  
   scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
+  scraped->Branch("nobselectron", &nobselectron, "nobselectron/I" );
   scraped->Branch("nobsgamma2pix", &nobsgamma2pix, "nobsgamma2pix/I" );
   scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );  
+  scraped->Branch("closestelectrondist", &closestelectrondist, "closestelectrondist/F" );  
   scraped->Branch("lepdwall", &lepdwall, "lepdwall/F" );
   scraped->Branch("vtxdwall", &vtxdwall, "vtxdwall/F" );
 
@@ -305,11 +311,13 @@ int main( const int nargs, const char** argv ) {
     nshowers = 0;
     nchargedpi = 0;
     nchargedpi35mev = 0;
-    closestshowerdist = -1.0;
-    closestpi0showerdist = -1.0;    
+    closestshowerdist = 1.0e6;
+    closestelectrondist = 1.0e6;
+    closestpi0showerdist = 1.0e6;    
     nobspi0gamma = 0;
     nmissedpi0gamma = 0;
     nobsgamma = 0;        
+    nobselectron = 0;        
     nobsgamma2pix = 0;
     lepdwall = 1000;
     for (int itrk=0; itrk<no_mctracks; itrk++) {
@@ -318,7 +326,8 @@ int main( const int nargs, const char** argv ) {
       dist += (nuvtx[1]-mctrk_startY[itrk])*(nuvtx[1]-mctrk_startY[itrk]);
       dist += (nuvtx[2]-mctrk_startZ[itrk])*(nuvtx[2]-mctrk_startZ[itrk]);
       dist = sqrt(dist);
-      
+
+      // look at tracks coming from the vertex
       if ( dist>1.0e-3 )
 	continue;
 	
@@ -394,24 +403,41 @@ int main( const int nargs, const char** argv ) {
     
     // shower info
     for ( int ishw=0; ishw<no_mcshowers; ishw++) {
+
+      if (mcshwr_origin[ishw]!=1)
+	continue;
+
+      std::cout << "origin=" << mcshwr_origin[ishw] << " pdg=" << mcshwr_pdg[ishw] << " id=" << mcshwr_TrackId[ishw] << std::endl;
+
       float shwdist = -1;
       if ( mcshwr_isEngDeposited[ishw]>0 ) {
-	nobsgamma++;
+	if ( mcshwr_pdg[ishw]==22 )
+	  nobsgamma++;
+	if ( abs(mcshwr_pdg[ishw])==11 )
+	  nobselectron++;
 
 	float shwdir[3];
 	shwdir[0] = mcshwr_CombEngX[ishw]-nuvtx[0];
 	shwdir[1] = mcshwr_CombEngY[ishw]-nuvtx[1];
 	shwdir[2] = mcshwr_CombEngZ[ishw]-nuvtx[2];
 	shwdist = sqrt( shwdir[0]*shwdir[0] + shwdir[1]*shwdir[1] + shwdir[2]*shwdir[2] );
-	if ( (closestshowerdist<0 || shwdist<closestshowerdist) ) {
-	  closestpi0showerdist = shwdist;
+	if ( mcshwr_pdg[ishw]==22 && (closestshowerdist<0 || shwdist<closestshowerdist) ) {
+	  closestshowerdist = shwdist;
+	}
+	if ( abs(mcshwr_pdg[ishw])==11 && (closestelectrondist<0 || shwdist<closestelectrondist) ) {
+	  closestelectrondist = shwdist;
 	}
 
 	if ( shwdist<0.6 )
 	  nobsgamma2pix++;
       }
     }
-    
+    std::cout << "  ngamma: " << nobsgamma 
+	      << "  nelectron: " << nobselectron
+	      << " showerdist=" << closestshowerdist 
+	      << " electrondist=" << closestelectrondist 
+	      << " pi0showerdist=" << closestpi0showerdist
+	      << std::endl;
       
     scraped->Fill();
 

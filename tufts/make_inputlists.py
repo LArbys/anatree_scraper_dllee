@@ -6,7 +6,9 @@ import os,sys
 # there a total of 20567 files, which amounts to a total of 123 GB of data
 # scraped output files are in the 100 of kB, making the shrinking of this information worth it
 
-ANATREE_SOURCEDIR="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data/mcc8.1/bnbnu_only_anatree/anatree"
+#ANATREE_SOURCEDIR="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data/mcc8.1/bnbnu_only_anatree/anatree"
+#ANATREE_SOURCEDIR="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data/mcc8.4/anatree"
+ANATREE_SOURCEDIR="/cluster/kappa/90-days-archive/wongjiradlab/larbys/data/mcc8.4/intrinsic_nue_cosmic_anatree"
 
 anafiles = os.listdir( ANATREE_SOURCEDIR )
 analist = []
