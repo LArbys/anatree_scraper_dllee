@@ -121,7 +121,9 @@ int main( const int nargs, const char** argv ) {
   // MC TRACK
   int no_mctracks;
   int mctrk_pdg[1000];
+  int mctrk_origin[1000];
   int mctrk_TrackId[1000];
+  int mctrk_MotherTrackId[1000];
   int mctrk_Process[1000];
   float mctrk_startX[1000];
   float mctrk_startY[1000];
@@ -135,7 +137,9 @@ int main( const int nargs, const char** argv ) {
   float mctrk_p_drifted[1000];
   tree->SetBranchAddress("no_mctracks", &no_mctracks);
   tree->SetBranchAddress("mctrk_pdg", mctrk_pdg);
+  tree->SetBranchAddress("mctrk_origin", mctrk_origin);
   tree->SetBranchAddress("mctrk_TrackId", mctrk_TrackId);
+  tree->SetBranchAddress("mctrk_MotherTrackId", mctrk_MotherTrackId);
   tree->SetBranchAddress("mctrk_Process", mctrk_Process);
   tree->SetBranchAddress("mctrk_startX", mctrk_startX);  
   tree->SetBranchAddress("mctrk_startY", mctrk_startY);  
@@ -154,6 +158,7 @@ int main( const int nargs, const char** argv ) {
   int mcshwr_pdg[1000];
   int mcshwr_origin[1000];
   int mcshwr_TrackId[1000];
+  int mcshwr_MotherTrkId[1000];
   int mcshwr_Process[1000];
   float mcshwr_startX[1000];
   float mcshwr_startY[1000];
@@ -172,6 +177,7 @@ int main( const int nargs, const char** argv ) {
   tree->SetBranchAddress("mcshwr_pdg", mcshwr_pdg);
   tree->SetBranchAddress("mcshwr_origin", mcshwr_origin);
   tree->SetBranchAddress("mcshwr_TrackId", mcshwr_TrackId);
+  tree->SetBranchAddress("mcshwr_MotherTrkId", mcshwr_MotherTrkId);
   tree->SetBranchAddress("mcshwr_Process", mcshwr_Process);
   tree->SetBranchAddress("mcshwr_startX", mcshwr_startX);  
   tree->SetBranchAddress("mcshwr_startY", mcshwr_startY);  
@@ -192,7 +198,7 @@ int main( const int nargs, const char** argv ) {
 
   TFile* outfile = new TFile("output_scrapedtree.root", "RECREATE");
   TTree* scraped = new TTree("scrapedana", "Scraped Anatree");
-  float enugev;
+  // mode/flavors
   int mode;
   int ccnc;
   int nufluxpdg;
@@ -201,28 +207,41 @@ int main( const int nargs, const char** argv ) {
   float fluxweight;
   float nuvtx[3];
   float nuvtxsce[3];
+  // kinematics
+  float enugev;
   float q2truth;
   float wtruth;
   float lmom;
-  float protonmaxke;
-  int nprotons60mev;
-  int nmuon;
-  int nelectron;
-  int nshowers;
-  int npi0;
-  int nchargedpi;  
-  int nchargedpi35mev;  
-  float closestshowerdist;
-  float closestelectrondist;
-  float closestpi0showerdist;
+  // primary counters
+  int nmuon1;
+  int nelectron1;
+  int npi01;
+  int nchargedpi1;
+  int nchargedpi35mev1;
+  int nprotons1;
+  int nprotons60mev1;
+  int nshowers; // all (means gamma)
+  int nobsgamma;
+  // secondary counters
+  int nmuon2;
+  int nelectron2;
+  int npi02;
+  int nchargedpi2;  
+  int nchargedpi35mev2;  
+  int nprotons2;
+  int nprotons60mev2;
+  // truth cuts
+  float protonmaxke;           // proton threshold
+  float closestshowerdist;     // all showers
+  float closestelectron1dist;  // primary electron
+  float closestelectron2dist;  // secondary electron
+  float closestpi0shower1dist; // primary pi0 showers
   int nobspi0gamma;
   int nmissedpi0gamma;  
-  int nobsgamma;
-  int nobselectron;
-  int nobsgamma2pix;
   float lepdwall;
   float vtxdwall;
-  scraped->Branch("enugev",&enugev,"enugev/F"); // enu_truth
+
+  // mode/flavors
   scraped->Branch("mode",&mode,"mode/I");       // mode_truth
   scraped->Branch("ccnc",&ccnc,"ccnc/I");       // ccnc_truth
   scraped->Branch("nufluxpdg",&nufluxpdg,"nufluxpdg/I"); // nuPDG_truth
@@ -231,29 +250,31 @@ int main( const int nargs, const char** argv ) {
   scraped->Branch("fluxweight",&fluxweight,"fluxweight/F"); 
   scraped->Branch("nuvtx", nuvtx, "nuvtx[3]/F");     // nuvtxx_truth
   scraped->Branch("nuvtxsce", nuvtxsce, "nuvtxsce[3]/F");     // nuvtxx_truth  
+  // kinematics
+  scraped->Branch("enugev",&enugev,"enugev/F"); // enu_truth
   scraped->Branch("q2truth", &q2truth, "q2truth/F");  // Q2_truth
   scraped->Branch("wtruth", &wtruth, "wtruth/F");     // W_truth
   scraped->Branch("lmom", &lmom, "lmom/F" );          // lep_mom_truth
   scraped->Branch("lepke", &lepke, "lepke/F");
-  scraped->Branch("protonmaxke", &protonmaxke, "protonmaxke/F" ); // derived from mctrk
-  scraped->Branch("nprotons60mev", &nprotons60mev, "nprotons60mev/I" ); // derived from mctrk
+  // primary counters
+  scraped->Branch("nmuon1", &nmuon1, "nmuon1/I");
+  scraped->Branch("nelectron1", &nelectron1, "nelectron1/I");
+  scraped->Branch("npi01", &npi01, "npi01/I");
+  scraped->Branch("nchargedpi1", &nchargedpi1, "nchargedpi1/I");
+  scraped->Branch("nchargedpi35mev1", &nchargedpi35mev1, "nchargedpi35mev1/I");
+  scraped->Branch("nprotons1", &nprotons1, "nprotons1/I");
+  scraped->Branch("nprotons60mev1", &nprotons60mev1, "nprotons60mev1/I" ); // derived from mctrk
   scraped->Branch("nshowers", &nshowers, "nshowers/I" ); // derived from mcshower
-  scraped->Branch("npi0", &npi0, "npi0/I" ); // from mctrk (should be shower?)
-  scraped->Branch("nmuon", &nmuon, "nmuon/I" ); // from mctrk (should be shower?)
-  scraped->Branch("nelectron", &nelectron, "nelectron/I" ); // from mctrk (should be shower?)
-  scraped->Branch("nchargedpi", &nchargedpi, "nchargedpi/I" ); // from mctrk
-  scraped->Branch("nchargedpi35mev", &nchargedpi35mev, "nchargedpi35mev/I" );  
-  scraped->Branch("closestpi0showerdist", &closestpi0showerdist, "closestpi0showerdist/F" );
-  scraped->Branch("nobspi0gamma", &nobspi0gamma, "nobspi0gamma/I" );
-  scraped->Branch("nmissedpi0gamma", &nmissedpi0gamma, "nmissedpi0gamma/I" );  
-  scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" );
-  scraped->Branch("nobselectron", &nobselectron, "nobselectron/I" );
-  scraped->Branch("nobsgamma2pix", &nobsgamma2pix, "nobsgamma2pix/I" );
+  scraped->Branch("nobsgamma", &nobsgamma, "nobsgamma/I" ); // derived from mcshower
+  // secondary counters
+  scraped->Branch("nelectron2", &nelectron2, "nelectron2/I");
+  // truth cuts
+  scraped->Branch("protonmaxke", &protonmaxke, "protonmaxke/F" ); // derived from mctrk
   scraped->Branch("closestshowerdist", &closestshowerdist, "closestshowerdist/F" );  
-  scraped->Branch("closestelectrondist", &closestelectrondist, "closestelectrondist/F" );  
+  scraped->Branch("closestelectron1dist", &closestelectron1dist, "closestelectron1dist/F" );  
+  scraped->Branch("closestelectron2dist", &closestelectron2dist, "closestelectron2dist/F" );  
   scraped->Branch("lepdwall", &lepdwall, "lepdwall/F" );
   scraped->Branch("vtxdwall", &vtxdwall, "vtxdwall/F" );
-
   
 
   TTree* scrapedpot = new TTree("pot", "Scraped POT");
@@ -263,14 +284,16 @@ int main( const int nargs, const char** argv ) {
   ULong_t bytes = tree->GetEntry(ientry);
   while (bytes!=0) {
 
-    if ( ientry%100==0 )
-      std::cout << "Anatree entry " << ientry << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
+    std::cout << "Anatree entry " << ientry << std::endl;
 
 
+    // primary particles
     bool haslepton = false;
     int primleptonid = -1;
-    nmuon = 0;
-    nelectron = 0;
+    nmuon1 = 0;
+    nelectron1 = 0;
+    closestelectron1dist = 1.0e6;
     for (int inu=0; inu<1; inu++) {
       enugev = enu_truth[inu];
       mode   = mode_truth[inu];
@@ -292,13 +315,16 @@ int main( const int nargs, const char** argv ) {
 
       if ( abs(nufluxpdg)==12 ) { 
 	lepke = sqrt(lmom*lmom + 0.911*0.911)-0.911;
-	if ( ccnc==0 )
-	  nelectron++;
+	if ( ccnc==0 ) {
+	  nelectron1++;
+	  closestelectron1dist = 0.0;
+	}
+	
       }
       else if ( abs(nufluxpdg)==14 ) {
 	lepke = sqrt(lmom*lmom + 105.0*105.0)-105.0;
 	if ( ccnc==0 )
-	  nmuon++;
+	  nmuon1++;
       }
 
       for ( auto& evtwgt_types : (*pevtwgt_weight) ) {
@@ -313,31 +339,54 @@ int main( const int nargs, const char** argv ) {
 	nuvtx_v[i] = nuvtx[i];
       vtxdwall = anascraper::dwall( nuvtx_v, boundary_type );
     }
+    std::cout << "  Mode: " << mode << " CCNC=" << ccnc << std::endl;
 
     // final state information
     // get lepton end point
     // get proton ke and count
-    protonmaxke = 0;
-    nprotons60mev = 0;
-    npi0 = 0;
+
+    // primary counters
+    npi01 = 0;
+    nchargedpi1 = 0;
+    nchargedpi35mev1 = 0;
+    nprotons1 = 0;
+    nprotons60mev1 = 0;
     nshowers = 0;
-    nchargedpi = 0;
-    nchargedpi35mev = 0;
+    nobsgamma = 0;
+    // secondary counters
+    nelectron2 = 0;
+    npi02 = 0;
+    nchargedpi2 = 0;
+    nchargedpi35mev2 = 0;
+    nprotons2 = 0;
+    nprotons60mev2 = 0;
+    // truth cuts
+    protonmaxke = 0.0;
     closestshowerdist = 1.0e6;
-    closestelectrondist = 1.0e6;
-    closestpi0showerdist = 1.0e6;    
-    nobspi0gamma = 0;
-    nmissedpi0gamma = 0;
-    nobsgamma = 0;        
-    nobselectron = 0;        
-    nobsgamma2pix = 0;
+    closestelectron2dist = 1.0e6;
+    closestpi0shower1dist = 1.0e6;    
     lepdwall = 1000;
+
+    // loop over tracks
     for (int itrk=0; itrk<no_mctracks; itrk++) {
+
+      if ( mctrk_origin[itrk]!=1 )
+	continue;
+
       float dist=0;
       dist += (nuvtx[0]-mctrk_startX[itrk])*(nuvtx[0]-mctrk_startX[itrk]);
       dist += (nuvtx[1]-mctrk_startY[itrk])*(nuvtx[1]-mctrk_startY[itrk]);
       dist += (nuvtx[2]-mctrk_startZ[itrk])*(nuvtx[2]-mctrk_startZ[itrk]);
       dist = sqrt(dist);
+      
+      if ( mctrk_pdg[itrk]==2212 )
+	std::cout << "  nu-origin proton:"
+		  << " id=" << mctrk_TrackId[itrk]
+		  << " mother=" << mctrk_MotherTrackId[itrk]
+		  << " process=" << mctrk_Process[itrk] 
+		  << " ancestor=" << mctrk_Ancestorpdg[itrk] 
+		  << " dist2vtx=" << dist << std::endl;
+
 
       // look at tracks coming from the vertex
       if ( dist>1.0e-3 )
@@ -346,12 +395,19 @@ int main( const int nargs, const char** argv ) {
       if ( mctrk_pdg[itrk]==2212 ) {
 	
 	float ke = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 938*938 )-938 );
-	std::cout << " primary proton: ke=" << ke << " process=" << mctrk_Process[itrk] << " ancestor=" << mctrk_Ancestorpdg[itrk] << " dist2vtx=" << dist << std::endl;
+	std::cout << "  primary proton:"
+		  << " ke=" << ke 
+		  << " id=" << mctrk_TrackId[itrk]
+		  << " mother=" << mctrk_MotherTrackId[itrk]
+		  << " process=" << mctrk_Process[itrk] 
+		  << " ancestor=" << mctrk_Ancestorpdg[itrk] 
+		  << " dist2vtx=" << dist << std::endl;
 	if ( ke>60 )
-	  nprotons60mev++;
+	  nprotons60mev1++;
 	if ( ke>protonmaxke ) {
 	  protonmaxke = ke;
 	}
+	nprotons1++;
       }
       else if ( mctrk_pdg[itrk]==13 || mctrk_pdg[itrk]==-13 ) {
 	// primary muon
@@ -363,10 +419,10 @@ int main( const int nargs, const char** argv ) {
 	lepdwall = anascraper::dwall( endpos, boundary_type );
       }
       else if ( mctrk_pdg[itrk]==111 ) {
-	npi0++;
+	npi01++;
 
 	// shower info
-	std::cout << "Chase down pi0 gammas: pi0 id=" << mctrk_TrackId[itrk] << std::endl;
+	std::cout << "  Chase down pi0 gammas: pi0 id=" << mctrk_TrackId[itrk] << std::endl;
 	for ( int ishw=0; ishw<no_mcshowers; ishw++) {
 	  if ( mcshwr_AncestorTrkId[ishw]==mctrk_TrackId[itrk] ) {
 
@@ -379,12 +435,12 @@ int main( const int nargs, const char** argv ) {
 	      shwdir[1] = mcshwr_CombEngY[ishw]-nuvtx[1];
 	      shwdir[2] = mcshwr_CombEngZ[ishw]-nuvtx[2];
 	      shwdist = sqrt( shwdir[0]*shwdir[0] + shwdir[1]*shwdir[1] + shwdir[2]*shwdir[2] );
-	      if ( (closestpi0showerdist<0 || shwdist<closestpi0showerdist) ) {
-		closestpi0showerdist = shwdist;
+	      if ( (closestpi0shower1dist<0 || shwdist<closestpi0shower1dist) ) {
+		closestpi0shower1dist = shwdist;
 	      }
 	    }// if energy deposited
 	    
-	    std::cout << "  mcshower: " << mcshwr_TrackId[ishw]
+	    std::cout << "  pi0-mcshower: " << mcshwr_TrackId[ishw]
 		      << " pdg=" << mcshwr_pdg[ishw]
 		      << " ancestor=" << mcshwr_AncestorTrkId[ishw]
 		      << " shwdist=" << shwdist
@@ -401,16 +457,17 @@ int main( const int nargs, const char** argv ) {
       }
       else if ( mctrk_pdg[itrk]==211 || mctrk_pdg[itrk]==-211 ) {
 	// charged pions
-	nchargedpi++;
+	nchargedpi1++;
 	float ke_pi = ( sqrt( mctrk_p_drifted[itrk]*mctrk_p_drifted[itrk] + 139.5*139.5 )-139.5 );
 	if ( ke_pi>35.0 )
-	  nchargedpi35mev++;
+	  nchargedpi35mev1++;
       }
       else {
-	std::cout << "other pdg: " << mctrk_pdg[itrk] << std::endl;
+	std::cout << "  other pdg: " << mctrk_pdg[itrk] << std::endl;
       }
     }//end of mc track
-    std::cout << "number of >60 mev protons: " << nprotons60mev << ", maxke=" << protonmaxke << std::endl;
+    std::cout << "  number of primary >60 mev protons: " << nprotons60mev1 << ", maxke=" << protonmaxke << " nprotons=" << nprotons1 << std::endl;
+    std::cout << "  number of primary >35 mev chargedpi: " << nchargedpi35mev1 << " nchargedpi=" << nchargedpi1 << std::endl;
 
     
     // shower info
@@ -419,14 +476,22 @@ int main( const int nargs, const char** argv ) {
       if (mcshwr_origin[ishw]!=1)
 	continue;
 
-      std::cout << "origin=" << mcshwr_origin[ishw] << " pdg=" << mcshwr_pdg[ishw] << " id=" << mcshwr_TrackId[ishw] << std::endl;
+      std::cout << "  shower at nu-origin=" << mcshwr_origin[ishw] << " pdg=" << mcshwr_pdg[ishw] 
+		<< " id=" << mcshwr_TrackId[ishw]
+		<< " motherid=" << mcshwr_MotherTrkId[ishw] << std::endl;
 
       float shwdist = -1;
       if ( mcshwr_isEngDeposited[ishw]>0 ) {
 	if ( mcshwr_pdg[ishw]==22 )
 	  nobsgamma++;
-	if ( abs(mcshwr_pdg[ishw])==11 )
-	  nobselectron++;
+	if ( abs(mcshwr_pdg[ishw])==11 ) {
+	  if ( mcshwr_TrackId[ishw]==mcshwr_MotherTrkId[ishw] ) {
+	    //nobselectron1++;
+	  }
+	  else {
+	    nelectron2++;
+	  }
+	}
 
 	float shwdir[3];
 	shwdir[0] = mcshwr_CombEngX[ishw]-nuvtx[0];
@@ -436,20 +501,37 @@ int main( const int nargs, const char** argv ) {
 	if ( mcshwr_pdg[ishw]==22 && (closestshowerdist<0 || shwdist<closestshowerdist) ) {
 	  closestshowerdist = shwdist;
 	}
-	if ( abs(mcshwr_pdg[ishw])==11 && (closestelectrondist<0 || shwdist<closestelectrondist) ) {
-	  closestelectrondist = shwdist;
+
+	if ( abs(mcshwr_pdg[ishw])==11 ) {
+	  if (mcshwr_TrackId[ishw]==mcshwr_MotherTrkId[ishw] ) {
+	    if ( closestelectron1dist<0 || shwdist<closestelectron1dist ) {
+	      closestelectron1dist = shwdist;
+	    }
+	  }
+	  else {
+	    if ( closestelectron2dist<0 || shwdist<closestelectron2dist ) {
+	      closestelectron2dist = shwdist;
+	    }
+	  }
 	}
 
-	if ( shwdist<0.6 )
-	  nobsgamma2pix++;
+	// if ( shwdist<0.6 )
+	//   nobsgamma2pix++;
       }
     }
-    std::cout << "  ngamma: " << nobsgamma 
-	      << "  nelectron: " << nobselectron
-	      << " showerdist=" << closestshowerdist 
-	      << " electrondist=" << closestelectrondist 
-	      << " pi0showerdist=" << closestpi0showerdist
-	      << std::endl;
+    std::cout << "  Primary counters" << std::endl;
+    std::cout << "    muon=" << nmuon1 << std::endl;
+    std::cout << "    electron=" << nelectron1 << " closestdist=" << closestelectron1dist <<  std::endl;
+    std::cout << "    nshowers=" << nshowers   << " closestdist=" << closestshowerdist << std::endl;
+    std::cout << "    nobsgamma=" << nobsgamma  << std::endl;
+    std::cout << "    npi01=" << npi01  << std::endl;
+    std::cout << "    nchargedpi1=" << nchargedpi1  << std::endl;
+    std::cout << "    nchargedpi35mev1=" << nchargedpi35mev1  << std::endl;
+    std::cout << "    nprotons1=" << nprotons1  << std::endl;
+    std::cout << "    nprotons60mev1=" << nprotons60mev1  << std::endl;
+    std::cout << "  Secondary counters" << std::endl;
+    std::cout << "    electron=" << nelectron2 << " closestdist=" << closestelectron2dist << std::endl;
+
       
     scraped->Fill();
 
